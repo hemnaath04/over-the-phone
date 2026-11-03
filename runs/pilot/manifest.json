@@ -1,0 +1,36 @@
+{
+  "name": "pilot",
+  "per_category": 2,
+  "seed": 7,
+  "categories": [
+    "us_phone",
+    "uk_mobile",
+    "uk_postcode",
+    "booking_ref",
+    "price_usd",
+    "price_gbp",
+    "date",
+    "time",
+    "email",
+    "card_last4",
+    "us_zip"
+  ],
+  "voices": [
+    "aai-audrey",
+    "aai-nancy"
+  ],
+  "conditions": [
+    "api24",
+    "resampled8",
+    "lossy8",
+    "native8",
+    "retake24"
+  ],
+  "workers": 4,
+  "tts_per_minute": 40,
+  "stt_per_minute": 120,
+  "keep_audio": "failures",
+  "git": "uncommitted",
+  "cases": 44,
+  "started": "2026-11-02T20:45:24"
+}
