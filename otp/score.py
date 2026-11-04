@@ -292,6 +292,7 @@ def spoken_email_to_written(transcript: str) -> str:
     for word, sym in ((" at ", "@"), (" dot ", "."), (" underscore ", "_"),
                       (" dash ", "-"), (" hyphen ", "-")):
         text = text.replace(word, sym)
+    text = re.sub(r"(?<=\b\w)\s*-\s*(?=\w\b)", "", text)  # "o-k-a-f-o-r" -> "okafor"
     return re.sub(r"\s+", "", text)
 
 

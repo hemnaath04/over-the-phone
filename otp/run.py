@@ -23,6 +23,7 @@ from otp import channel
 from otp.aai import AssemblyAI
 from otp.entities import CATEGORIES, build_items
 from otp.score import score
+from otp.speakable import speakable
 
 # Accent of each voice, from the starter table at docs/tts/voices.
 VOICES = {
@@ -32,6 +33,12 @@ VOICES = {
 }
 DEFAULT_VOICES = ["aai-audrey", "aai-titus", "aai-nancy", "aai-buford"]
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def locale_for(item) -> str:
+    """The locale the agent speaks for: a UK business for UK entities, else the US."""
+    uk = item.category in ("uk_postcode", "uk_mobile", "price_gbp") or item.gold.get("style") == "uk_numeric"
+    return "en-GB" if uk else "en-US"
 
 
 def keep_sample(case_id: str) -> bool:
@@ -54,6 +61,7 @@ class Run:
         self.results = self.dir / "results.jsonl"
         self.conditions = args.conditions
         self.keep_all = args.keep_audio == "all"
+        self.variant = args.variant
         self.api = AssemblyAI(tts_per_minute=args.tts_per_minute, stt_per_minute=args.stt_per_minute)
         self.lock = threading.Lock()
         self.done = set()
@@ -82,16 +90,18 @@ class Run:
         case_id = f"{item.id}.{voice}"
         todo = [c for c in self.conditions if (case_id, c) not in self.done]
         rows = []
+        text = speakable(item.text, locale_for(item)) if self.variant == "speakable" else item.text
         for cond in todo:
             fmt = channel.SOURCE[cond]
-            audio, meta = self.tts(case_id, item.text, voice, fmt)
+            audio, meta = self.tts(case_id, text, voice, fmt)
             heard_wav = channel.apply(cond, audio, seed=case_id)
             tr = self.api.transcribe(heard_wav)
             passed, heard = score(item.category, tr.text, item.gold)
             row = {
                 "case_id": case_id, "item_id": item.id, "category": item.category,
                 "voice": voice, "accent": VOICES.get(voice, "?"), "condition": cond,
-                "text": item.text, "surface": item.surface, "gold": item.gold,
+                "text": item.text, "spoken_text": text, "variant": self.variant,
+                "surface": item.surface, "gold": item.gold,
                 "transcript": tr.text, "heard": heard, "pass": passed,
                 "stt_session_id": tr.session_id, "stt_request_time_ms": tr.request_time_ms,
                 **meta, "at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -126,6 +136,8 @@ def main() -> None:
     ap.add_argument("--tts-per-minute", type=int, default=40, help="free plan allows 50")
     ap.add_argument("--stt-per-minute", type=int, default=120)
     ap.add_argument("--keep-audio", choices=["failures", "all"], default="failures")
+    ap.add_argument("--variant", choices=["raw", "speakable"], default="raw",
+                    help="speakable: rewrite each sentence with otp.speakable first")
     args = ap.parse_args()
 
     run = Run(args)
