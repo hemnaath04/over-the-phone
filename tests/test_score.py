@@ -62,6 +62,8 @@ CASES = [
     ("time", {"hour": 9, "minute": 30}, "The technician will arrive at 0930.", True),
     ("time", {"hour": 16, "minute": 15}, "We've moved your call to 1615.", True),
     ("time", {"hour": 16, "minute": 15}, "We've moved your call to 1651.", False),
+    ("time", {"hour": 16, "minute": 30}, "You're booked for May 8th, 2026 at 4.30pm.", True),
+    ("time", {"hour": 20, "minute": 26}, "You're booked for May 8th, 2026.", False),
     ("email", {"email": "j.smith42@acme.co.uk"}, "I've sent it to j.smith42@acme.co.uk.", True),
     ("email", {"email": "j.smith42@acme.co.uk"}, "j dot smith forty two at acme dot co dot uk", True),
     ("email", {"email": "j.smith42@acme.co.uk"}, "j.smith24@acme.co.uk", False),

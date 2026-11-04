@@ -6,3 +6,4 @@ __pycache__/
 runs/*/audio/
 notes/
 runs/*.log
+runs/*/*.wav
