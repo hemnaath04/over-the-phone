@@ -296,6 +296,7 @@ def spoken_email_to_written(transcript: str) -> str:
                       (" dash ", "-"), (" hyphen ", "-")):
         text = text.replace(word, sym)
     text = re.sub(r"(?<=\b\w)\s*-\s*(?=\w\b)", "", text)  # "o-k-a-f-o-r" -> "okafor"
+    text = re.sub(r"[?!,]\s*@", "@", text)  # "jwong? @northwind.co.uk" on a real call
     return re.sub(r"\s+", "", text)
 
 

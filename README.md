@@ -31,7 +31,7 @@ each traceable to a TTS `x-request-id` and an STT `session_id`.
   prompting guide (dashing phone digits) made things worse, so we measured it and took it out.
 - **[Heard As](#heard-as)** turns all of it into a tool: paste what your agent will say, and see
   what the caller hears and what your call logs will say, before and after the fix.
-- A real call over a LiveKit phone number to the agent here worked end to end.
+- On a real phone call to the agent, Speakable got 11/11 entities through to Whisper (8/11 as written).
 
 ## What was measured
 
@@ -191,16 +191,30 @@ so every sentence passes through Speakable as it streams, without waiting for th
   `python -m otp.score_call recording.m4a --name call-1`.
 
 Over LiveKit's WebRTC path ([`agent/room_listener.py`](agent/room_listener.py), `runs/webrtc-1`)
-the reader scored 11/12 raw and 12/12 with Speakable; the one raw miss is the UK date. A real call to a
-LiveKit phone number reached the agent, which answered in about 3 s and read the script over the
-phone network.
+the reader scored 11/12 raw and 12/12 with Speakable; the one raw miss is the UK date.
+
+**A real phone call** ([`runs/call-1/call.md`](runs/call-1/call.md)): a mobile called the agent's
+LiveKit phone number, and the call was recorded on the handset, so this is the audio after the
+carrier. Items 1–2 were spoken before recording started, which leaves 11 entities in each form:
+
+| | AssemblyAI listener | Whisper |
+|---|---|---|
+| as written | 8/11 | 8/11 |
+| Speakable | 10/11 | **11/11** |
+
+Phone numbers, card, ZIP, time, price and reference came through intact in both forms. Emails are
+what the real line hurts: `jwong@` was heard as "jzwong" and "jajuang" as written, and correctly
+once spelled out. The one Speakable miss shows the transcriber again: with "O-K-A-F-O-R" spelled
+letter by letter, Whisper wrote okafor, and Universal-3.5 Pro still wrote **okafur**. It replaces
+spelled letters with its own guess at the word, which matters for any agent that confirms an
+email by spelling it. One call is a check, not a statistic.
 
 ## Reproduce
 
 ```bash
 uv sync                                   # httpx + pytest, ~10 MB
 echo "ASSEMBLYAI_API_KEY=..." > .env
-uv run pytest -q                          # 95 tests
+uv run pytest -q                          # 96 tests
 uv run python -m otp.run --name mine --per-category 2 --voices aai-audrey,aai-nancy
 uv run python -m otp.report runs/mine
 uv run python -m otp.second_listener runs/mine   # needs whisper.cpp + ggml-small.en.bin (WHISPER_MODEL=...)
@@ -214,7 +228,6 @@ The full run cost about 113K TTS characters (about $1.70 at $15 per 1M) plus abo
 - The listener is a speech-to-text model, not a person. The second listener and the paired
   design reduce the circularity but don't remove it.
 - `lossy8` zero-fills lost packets; real networks conceal them, so real calls should do better.
-- One real call has been made, but not yet recorded and scored, so the carrier path is checked
-  by the 8 kHz simulation only. Mobile networks may carry wideband audio (AMR-WB), so a real
-  call may sound better than the simulation.
+- The carrier path rests on one recorded call (22 entities). Its results match the simulation's
+  direction, but at that size they are a check, not a measurement.
 - Four voices of 4,000+, English only, 11 entity types.

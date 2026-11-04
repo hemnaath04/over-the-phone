@@ -67,6 +67,7 @@ CASES = [
     ("email", {"email": "j.smith42@acme.co.uk"}, "I've sent it to j.smith42@acme.co.uk.", True),
     ("email", {"email": "j.smith42@acme.co.uk"}, "j dot smith forty two at acme dot co dot uk", True),
     ("email", {"email": "j.smith42@acme.co.uk"}, "j.smith24@acme.co.uk", False),
+    ("email", {"email": "jwong@northwind.co.uk"}, "Can you confirm your email is jwong? @northwind.co.uk.", True),
 ]
 
 

@@ -97,6 +97,12 @@ def main() -> None:
     spans = item_spans(aai.words)
     rows = []
     for line in script:
+        if line["n"] not in aai_items and line["n"] not in spans:
+            # The marker never made it into the recording (it started late or ended early):
+            # this line was not heard, which is not the same as heard wrong.
+            rows.append({**line, "recorded": False, "aai_pass": None, "whisper_pass": None,
+                         "aai_heard": "", "whisper_heard": "", "aai_segment": "", "whisper_segment": ""})
+            continue
         a_text = aai_items.get(line["n"], "")
         w_text = ""
         if line["n"] in spans:
@@ -104,7 +110,7 @@ def main() -> None:
             w_text = MARKER.sub("", heard, count=1).strip()
         a_pass, a_heard = score(line["category"], a_text, line["gold"])
         w_pass, w_heard = score(line["category"], w_text, line["gold"])
-        rows.append({**line, "aai_segment": a_text, "aai_pass": a_pass, "aai_heard": a_heard,
+        rows.append({**line, "recorded": True, "aai_segment": a_text, "aai_pass": a_pass, "aai_heard": a_heard,
                      "whisper_segment": w_text, "whisper_pass": w_pass, "whisper_heard": w_heard,
                      "stt_session_id": aai.session_id})
     with (out_dir / "call.jsonl").open("w") as f:
@@ -115,13 +121,16 @@ def main() -> None:
              f"Recording `{Path(args.recording).name}`, {channel.duration_ms(wav) / 1000:.0f} s. "
              f"AssemblyAI STT session `{aai.session_id}`.", "",
              "| variant | AssemblyAI pass | Whisper pass |", "|---|---|---|"]
+    missing = [r["n"] for r in rows if not r["recorded"]]
+    if missing:
+        lines[-2:-2] = [f"Not in the recording, so left out of the counts: items {', '.join(map(str, missing))}.", ""]
     for v in ("raw", "speakable"):
-        vs = [r for r in rows if r["variant"] == v]
+        vs = [r for r in rows if r["variant"] == v and r["recorded"]]
         lines.append(f"| {v} | {sum(r['aai_pass'] for r in vs)}/{len(vs)} | "
                      f"{sum(r['whisper_pass'] for r in vs)}/{len(vs)} |")
     lines += ["", "| item | variant | said | AssemblyAI heard | Whisper heard |", "|---|---|---|---|---|"]
     for r in rows:
-        mark = lambda ok: "✓" if ok else "✗"  # noqa: E731
+        mark = lambda ok: "–" if ok is None else ("✓" if ok else "✗")  # noqa: E731
         lines.append(f"| {r['n']} {r['item_id']} | {r['variant']} | `{r['surface']}` | "
                      f"{mark(r['aai_pass'])} `{r['aai_heard']}` | {mark(r['whisper_pass'])} `{r['whisper_heard']}` |")
     (out_dir / "call.md").write_text("\n".join(lines) + "\n")
