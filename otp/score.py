@@ -264,6 +264,8 @@ def time_mentions(transcript: str) -> list[tuple[int, int, bool]]:
     text = re.sub(r"\b(\d{1,2}) (\d{2})\b", r"\1:\2", text)  # "4 30 pm" -> "4:30 pm"
     text = re.sub(r"\b(\d{1,2}) : (\d{2})\b", r"\1:\2", text)
     text = re.sub(r"\s*\bo'?clock\b", ":00", text)
+    # "oh nine thirty" is often written "0930": a 24-hour time without its colon.
+    text = re.sub(r"\b([01]\d|2[0-3])([0-5]\d)\b", r"\1:\2", text)
     found = []
     pat = re.compile(r"\b(\d{1,2})(?::\s?(\d{2}))?\s*(?:(a|p)\s?\.?\s?m\b\.?)?", re.I)
     for h, m, mer in pat.findall(text):

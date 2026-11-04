@@ -1,0 +1,33 @@
+{
+  "cases": 880,
+  "rows": 4400,
+  "overall": {
+    "api24": 0.9659090909090909,
+    "resampled8": 0.9681818181818181,
+    "lossy8": 0.9659090909090909,
+    "native8": 0.9727272727272728,
+    "retake24": 0.9670454545454545
+  },
+  "paired": {
+    "resampled8": {
+      "cases": 880,
+      "phone_only_failures": 0,
+      "phone_only_fixes": 2
+    },
+    "lossy8": {
+      "cases": 880,
+      "phone_only_failures": 1,
+      "phone_only_fixes": 1
+    },
+    "native8": {
+      "cases": 880,
+      "phone_only_failures": 2,
+      "phone_only_fixes": 8
+    },
+    "retake24": {
+      "cases": 880,
+      "phone_only_failures": 8,
+      "phone_only_fixes": 9
+    }
+  }
+}
