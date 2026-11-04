@@ -13,7 +13,10 @@ full-v1 run found:
 - Postcodes and booking references are spelled with dashes, and letters that a
   3.4 kHz phone band blurs together (F/S, E/C, B/D/P/T/V, M/N) get a phonetic
   clarifier, the way a person on the phone says "F for Foxtrot".
-- Phone, card and ZIP digits are dashed so each digit is read alone.
+- Card and ZIP digits are dashed so each digit is read alone. Phone numbers are
+  left as written: the server's normalizer already reads them digit by digit, and
+  dashing them made the model drop a digit from runs like "5-5-5-5" (speakable-v1,
+  us_phone-015/017/019: an area code ending in 5 followed by 555).
 - 24-hour times become 12-hour times with AM/PM in the US locale.
 
 `speakable(text, locale)` is pure text in, text out, so it can sit between an
@@ -112,7 +115,7 @@ def _references(text: str) -> str:
     return re.sub(r"((?:reference|code|ref)(?: number)? is )([A-Z0-9]{3}-?[A-Z0-9]{3})\b", repl, text)
 
 
-def _digits(text: str) -> str:
+def _digits(text: str, dash_phones: bool = False) -> str:
     def group(m: re.Match) -> str:
         digits = re.sub(r"\D", "", m.group(0))
         lead = "+" if m.group(0).startswith("+") else ""
@@ -122,14 +125,17 @@ def _digits(text: str) -> str:
         groups = [g for g in re.split(r"[\s().-]+", m.group(0)) if g]
         return ", ".join(dash(g) for g in groups) if len(groups) > 1 else dash(digits)
 
-    text = re.sub(r"\+\d{2} \d{4} \d{3} ?\d{3}", group, text)  # UK international
-    text = re.sub(r"\(\d{3}\) \d{3}-\d{4}|\b\d{3}[-.]\d{3}[-.]\d{4}\b", group, text)  # US
-    text = re.sub(r"\b0\d{4} \d{3} ?\d{3}\b", group, text)  # UK national
+    if dash_phones:
+        text = re.sub(r"\+\d{2} \d{4} \d{3} ?\d{3}", group, text)  # UK international
+        text = re.sub(r"\(\d{3}\) \d{3}-\d{4}|\b\d{3}[-.]\d{3}[-.]\d{4}\b", group, text)  # US
+        text = re.sub(r"\b0\d{4} \d{3} ?\d{3}\b", group, text)  # UK national
     text = re.sub(r"(card ending(?: in)? )(\d{4})\b", lambda m: m.group(1) + dash(m.group(2)), text)
     return re.sub(r"(ZIP code is |deliver to )(\d{5})\b", lambda m: m.group(1) + dash(m.group(2)), text)
 
 
-def speakable(text: str, locale: str = "en-US") -> str:
-    for step in (_emails, _postcodes, _references, _digits):
+def speakable(text: str, locale: str = "en-US", dash_phones: bool = False) -> str:
+    """Rewrite `text`; `dash_phones` restores the v1 phone dashing, kept for comparison."""
+    for step in (_emails, _postcodes, _references):
         text = step(text)
+    text = _digits(text, dash_phones)
     return _times(_dates(text, locale), locale)

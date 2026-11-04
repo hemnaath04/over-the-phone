@@ -3,9 +3,11 @@
     uv run python -m otp.score_call path/to/call-recording.m4a --name call-1
 
 The reader agent says "Item N." before each line of agent/reader_script.json. This
-transcribes the whole recording with both listeners (AssemblyAI Sync STT and local
-Whisper), splits each transcript at the item markers, and scores every line against
-its gold value. Results go to runs/<name>/call.jsonl and runs/<name>/call.md.
+transcribes the whole recording with AssemblyAI Sync STT (with word timestamps),
+splits it at the item markers, and scores every line against its gold value. The
+second listener, local Whisper, gets one short clip per item cut at those timestamps:
+over a whole three-minute recording it misheard the markers themselves ("Item 10"
+as "J, I am 10"), which lost items for reasons that have nothing to do with entities. Results go to runs/<name>/call.jsonl and runs/<name>/call.md.
 
 The recording is what reached the phone that dialled in, after the real network
 and codec, so this is the check on the simulated `native8` and `lossy8` channels.
@@ -51,6 +53,28 @@ def split_items(transcript: str) -> dict[int, str]:
     return out
 
 
+def item_spans(words: list[dict]) -> dict[int, tuple[int, int]]:
+    """Start and end (ms) of each item, from the word timestamps of its "Item N" marker."""
+    starts = []
+    for i, w in enumerate(words[:-1]):
+        if re.sub(r"\W", "", w["text"]).lower() == "item":
+            nxt = re.sub(r"[^\w-]", "", words[i + 1]["text"])
+            n = marker_number(nxt)
+            if n is not None:
+                starts.append((n, w["start"]))
+    spans = {}
+    for k, (n, start) in enumerate(starts):
+        end = starts[k + 1][1] if k + 1 < len(starts) else words[-1]["end"] + 1500
+        spans[n] = (start, end)
+    return spans
+
+
+def cut(wav: bytes, start_ms: int, end_ms: int, rate: int = 8000) -> bytes:
+    pcm = wav[44:]  # wav_from_pcm writes a plain 44-byte header
+    a, b = start_ms * rate // 1000 * 2, end_ms * rate // 1000 * 2
+    return channel.wav_from_pcm(pcm[a:b], rate)
+
+
 def load_audio(path: Path) -> bytes:
     """Any container ffmpeg reads (an iPhone call recording is .m4a) to 8 kHz PCM WAV."""
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "8000",
@@ -68,12 +92,16 @@ def main() -> None:
     out_dir = ROOT / "runs" / args.name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    aai = AssemblyAI().transcribe(wav)
-    wh = whisper(wav)
-    aai_items, wh_items = split_items(aai.text), split_items(wh)
+    aai = AssemblyAI().transcribe(wav, timestamps=True)
+    aai_items = split_items(aai.text)
+    spans = item_spans(aai.words)
     rows = []
     for line in script:
-        a_text, w_text = aai_items.get(line["n"], ""), wh_items.get(line["n"], "")
+        a_text = aai_items.get(line["n"], "")
+        w_text = ""
+        if line["n"] in spans:
+            heard = whisper(cut(wav, *spans[line["n"]]))
+            w_text = MARKER.sub("", heard, count=1).strip()
         a_pass, a_heard = score(line["category"], a_text, line["gold"])
         w_pass, w_heard = score(line["category"], w_text, line["gold"])
         rows.append({**line, "aai_segment": a_text, "aai_pass": a_pass, "aai_heard": a_heard,

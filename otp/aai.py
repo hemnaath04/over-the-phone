@@ -6,11 +6,12 @@ for STT), so every row of a report can be traced back to one request.
 
 from __future__ import annotations
 
+import json
 import os
 import random
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
@@ -80,6 +81,7 @@ class Transcript:
     text: str
     session_id: str
     request_time_ms: float
+    words: list = field(default_factory=list)  # {"text", "start", "end"} ms, with timestamps
 
 
 class AssemblyAI:
@@ -99,11 +101,14 @@ class AssemblyAI:
                       int(h.get("x-tts-billed-characters", 0)),
                       int(h.get("x-tts-audio-duration-ms", 0)))
 
-    def transcribe(self, wav: bytes) -> Transcript:
+    def transcribe(self, wav: bytes, timestamps: bool = False) -> Transcript:
+        files = {"audio": ("audio.wav", wav, "audio/wav")}
+        if timestamps:
+            files["config"] = (None, json.dumps({"timestamps": True}), "application/json")
         resp = _send(self.client, self.stt_limit, method="POST", url=STT_URL,
-                     headers={"X-AAI-Model": STT_MODEL},
-                     files={"audio": ("audio.wav", wav, "audio/wav")})
+                     headers={"X-AAI-Model": STT_MODEL}, files=files)
         if resp.status_code != 200:
             raise RuntimeError(f"STT {resp.status_code}: {resp.text[:300]}")
         d = resp.json()
-        return Transcript(d.get("text", ""), d.get("session_id", ""), d.get("request_time_ms", 0.0))
+        return Transcript(d.get("text", ""), d.get("session_id", ""), d.get("request_time_ms", 0.0),
+                          d.get("words", []))

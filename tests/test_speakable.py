@@ -22,16 +22,23 @@ from otp.speakable import speakable
     ("Your nearest branch is at SE14 9PS.", "en-GB",
      "Your nearest branch is at S-E-1-4, 9-P-S, that's S for Sierra, E for Echo, P for Papa."),
     ("We'll text the confirmation to 07700 900123.", "en-GB",
-     "We'll text the confirmation to 0-7-7-0-0, 9-0-0-1-2-3."),
-    ("The number we have on file is +44 7700 900123.", "en-GB",
-     "The number we have on file is +4-4, 7-7-0-0, 9-0-0-1-2-3."),
+     "We'll text the confirmation to 07700 900123."),
     ("You can reach the front desk at (452) 555-0118.", "en-US",
-     "You can reach the front desk at 4-5-2, 5-5-5, 0-1-1-8."),
+     "You can reach the front desk at (452) 555-0118."),
     ("I'll charge the card ending in 8091.", "en-US", "I'll charge the card ending in 8-0-9-1."),
     ("That comes to £34.99 including tax.", "en-GB", "That comes to £34.99 including tax."),
 ])
 def test_rewrites(text, locale, expected):
     assert speakable(text, locale) == expected
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("We'll text the confirmation to 07700 900123.", "We'll text the confirmation to 0-7-7-0-0, 9-0-0-1-2-3."),
+    ("The number we have on file is +44 7700 900123.", "The number we have on file is +4-4, 7-7-0-0, 9-0-0-1-2-3."),
+    ("You can reach the front desk at (452) 555-0118.", "You can reach the front desk at 4-5-2, 5-5-5, 0-1-1-8."),
+])
+def test_v1_phone_dashing_still_available(text, expected):
+    assert speakable(text, "en-GB", dash_phones=True) == expected
 
 
 def test_rewritten_sentences_still_carry_their_entity():

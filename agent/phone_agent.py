@@ -28,7 +28,7 @@ from typing import AsyncIterable
 
 from dotenv import load_dotenv
 from livekit import rtc
-from livekit.agents import (Agent, AgentServer, AgentSession, JobContext, JobProcess,
+from livekit.agents import (NOT_GIVEN, Agent, AgentServer, AgentSession, JobContext, JobProcess,
                             ModelSettings, TurnHandlingOptions, cli)
 from livekit.plugins import assemblyai, openai, silero
 
@@ -93,10 +93,12 @@ class Reader(SpeakableAgent):
         self.lines = json.loads((ROOT / "agent" / "reader_script.json").read_text())
 
     async def on_enter(self) -> None:
-        await self.session.say("Starting the test script. Please stay on the line.")
+        # No interruptions: a cough on the line must not cut an item short.
+        say = lambda text: self.session.say(text, allow_interruptions=False)  # noqa: E731
+        await say("Starting the test script. Please stay on the line.")
         for line in self.lines:
-            await self.session.say(f"Item {line['n']}. {line['spoken_text']}")
-        await self.session.say("End of the test script. Thank you, goodbye.")
+            await say(f"Item {line['n']}. {line['spoken_text']}")
+        await say("End of the test script. Thank you, goodbye.")
 
 
 server = AgentServer()
@@ -113,10 +115,13 @@ server.setup_fnc = prewarm
 async def entrypoint(ctx: JobContext) -> None:
     tts = assemblyai.TTS(model="assemblyai-tts-1", voice=VOICE)
     tts.prewarm()
+    # The reader only speaks its script, so it gets no LLM and cannot answer the caller.
+    llm = NOT_GIVEN if MODE == "reader" else openai.LLM(
+        model="gemma-4-31b", base_url="https://llm-gateway.assemblyai.com/v1",
+        api_key=os.environ["ASSEMBLYAI_API_KEY"])
     session = AgentSession(
         stt=assemblyai.STT(model="universal-3-6-pro", mode="balanced", vad_threshold=VAD_THRESHOLD),
-        llm=openai.LLM(model="gemma-4-31b", base_url="https://llm-gateway.assemblyai.com/v1",
-                       api_key=os.environ["ASSEMBLYAI_API_KEY"]),
+        llm=llm,
         tts=tts,
         vad=ctx.proc.userdata["vad"],
         turn_handling=TurnHandlingOptions(turn_detection="stt", endpointing={"min_delay": 0}),

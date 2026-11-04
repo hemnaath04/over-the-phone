@@ -173,7 +173,7 @@
   "item_id": "us_phone-007",
   "category": "us_phone",
   "variant": "speakable",
-  "spoken_text": "You can reach the front desk at 4-5-2, 5-5-5, 0-1-1-8.",
+  "spoken_text": "You can reach the front desk at (452) 555-0118.",
   "gold": {
    "digits": "4525550118"
   },
@@ -195,7 +195,7 @@
   "item_id": "uk_mobile-000",
   "category": "uk_mobile",
   "variant": "speakable",
-  "spoken_text": "We'll text the confirmation to 0-7-7-0-0, 9-0-0, 8-9-5.",
+  "spoken_text": "We'll text the confirmation to 07700 900 895.",
   "gold": {
    "digits": "7700900895"
   },
