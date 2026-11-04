@@ -14,6 +14,8 @@ This repo does that: 880 agent sentences, each built around one hard entity, spo
 by four voices and heard through five channel conditions. That's 4,400 transcripts,
 each traceable to a TTS `x-request-id` and an STT `session_id`.
 
+**[Watch the 60-second demo](https://drive.google.com/file/d/14WDCNouzduhx2jkVtl23HSACcsHSPJKw/view?usp=sharing)**: Heard As finding a UK date read as "May 8th" and the £7,900.99 transcription bug, narrated by AssemblyAI-TTS-1.
+
 ## Results at a glance
 
 | | as an LLM writes it | with Speakable |
