@@ -52,3 +52,14 @@ def test_every_benchmark_sentence_is_detected_and_self_scores():
         assert len(spans) == 1, (item.id, item.text, spans)
         s = spans[0]
         assert score(scorer_category(s), item.text, s.gold)[0], (item.id, item.text, s.gold)
+
+
+@pytest.mark.parametrize("transcript, expected", [
+    ("You're booked for August 5th, 2026 at 16:30. Receipt goes to N-O-A-H dot O-K-A-F-O-R at brightdental.com.",
+     "noah.okafor@brightdental.com"),
+    ("You will get an email at T-P-A-T-E-L at acme.com, and", "tpatel@acme.com"),
+    ("booked for May 8th, 2026 at 16:30 with Dr Patel", "(no address)"),
+])
+def test_heard_as_shows_the_real_address(transcript, expected):
+    from otp.heardas import readable
+    assert readable("email", transcript, "", "") == expected

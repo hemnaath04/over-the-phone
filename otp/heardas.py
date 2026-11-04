@@ -67,7 +67,8 @@ def readable(category: str, transcript: str, heard: str, surface: str) -> str:
         spoken = re.sub(r"\s+at\s+", "@", spoken)
         # "an email at tpatel at acme.com" has two "at"s; the address is the last match
         # whose domain has a dot in it.
-        found = re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", spoken)
+        # A domain ends in letters, so "2026 at 16:30" is not read as an address.
+        found = re.findall(r"\b[a-z][\w.+-]*@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b", spoken)
         return found[-1] if found else "(no address)"
     return heard.split(" | ")[0] if heard else "(not heard)"
 
